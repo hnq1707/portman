@@ -56,6 +56,6 @@ var exposeCmd = &cobra.Command{
 }
 
 func init() {
-	exposeCmd.Flags().StringVar(&exposeProvider, "provider", "localhost.run", "Tunnel provider (localhost.run, serveo)")
+	exposeCmd.Flags().StringVar(&exposeProvider, "provider", "pinggy", "Tunnel provider (pinggy, localhost.run, serveo)")
 	rootCmd.AddCommand(exposeCmd)
 }
