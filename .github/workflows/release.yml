@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          # Windows
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/portman-windows-amd64.exe .
+          # Linux
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/portman-linux-amd64 .
+          # macOS Intel
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/portman-darwin-amd64 .
+          # macOS Apple Silicon
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/portman-darwin-arm64 .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/portman-windows-amd64.exe
+            dist/portman-linux-amd64
+            dist/portman-darwin-amd64
+            dist/portman-darwin-arm64

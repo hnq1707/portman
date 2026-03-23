@@ -7,21 +7,30 @@ Built with Go. Perfect for microservice development.
 
 ## ⚡ Quick Install
 
-### Option 1: `go install` (recommended)
+### Option 1: Download binary (không cần cài gì)
+
+1. Vào [**Releases**](https://github.com/nay-kia/portman/releases/latest)
+2. Tải file phù hợp OS:
+   | OS | File |
+   |---|---|
+   | Windows | `portman-windows-amd64.exe` |
+   | macOS (Intel) | `portman-darwin-amd64` |
+   | macOS (M1/M2) | `portman-darwin-arm64` |
+   | Linux | `portman-linux-amd64` |
+3. **Windows**: Tải về → chạy `install.bat` → xong! Mở terminal mới gõ `portman`
+4. **macOS/Linux**: `chmod +x portman-*` → move vào `/usr/local/bin/`
+
+### Option 2: `go install` (dành cho dev có Go)
 ```bash
 go install github.com/nay-kia/portman@latest
 ```
-> Binary sẽ nằm ở `$GOPATH/bin/portman` — dùng được ngay từ terminal.
 
-### Option 2: Clone & Build
+### Option 3: Clone & Build
 ```bash
 git clone https://github.com/nay-kia/portman.git
 cd portman
 go build -ldflags="-s -w" -o portman.exe .
 ```
-
-### Option 3: Download Release
-Tải binary từ [Releases](https://github.com/nay-kia/portman/releases), giải nén và thêm vào `PATH`.
 
 ---
 
