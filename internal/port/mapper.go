@@ -14,12 +14,22 @@ import (
 
 // Mapper handles TCP port forwarding.
 type Mapper struct {
-	SrcPort     int
-	DstPort     int
-	Host        string
-	listener    net.Listener
-	connCount   atomic.Int64
-	activeConns sync.WaitGroup
+	SrcPort       int
+	DstPort       int
+	Host          string
+	listener      net.Listener
+	connCount     atomic.Int64
+	activeConns   sync.WaitGroup
+	TotalBytesIn  atomic.Int64
+	TotalBytesOut atomic.Int64
+	ActiveConns   atomic.Int64
+	TotalConns    atomic.Int64
+}
+
+// Stats returns current traffic statistics.
+func (m *Mapper) Stats() (bytesIn, bytesOut, active, total int64) {
+	return m.TotalBytesIn.Load(), m.TotalBytesOut.Load(),
+		m.ActiveConns.Load(), m.TotalConns.Load()
 }
 
 // NewMapper creates a new port mapper.
@@ -68,6 +78,8 @@ func (m *Mapper) Start(ctx context.Context) error {
 		}
 
 		m.activeConns.Add(1)
+		m.ActiveConns.Add(1)
+		m.TotalConns.Add(1)
 		connID := m.connCount.Add(1)
 		go m.handleConn(ctx, conn, targetAddr, connID)
 	}
@@ -75,6 +87,7 @@ func (m *Mapper) Start(ctx context.Context) error {
 
 func (m *Mapper) handleConn(ctx context.Context, src net.Conn, targetAddr string, connID int64) {
 	defer m.activeConns.Done()
+	defer m.ActiveConns.Add(-1)
 	defer src.Close()
 
 	green := color.New(color.FgGreen)
@@ -113,6 +126,10 @@ func (m *Mapper) handleConn(ctx context.Context, src net.Conn, targetAddr string
 		<-done // Wait for the other direction too
 	case <-ctx.Done():
 	}
+
+	// Track totals
+	m.TotalBytesOut.Add(bytesOut)
+	m.TotalBytesIn.Add(bytesIn)
 
 	elapsed := time.Since(start)
 	dim.Printf("  ◀ [#%d] closed (%s, ↑%s ↓%s)\n",
