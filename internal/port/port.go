@@ -1,10 +1,14 @@
 package port
 
-import (
-	"fmt"
-	"os/exec"
-	"strconv"
-)
+// PortInfo holds information about a port binding.
+type PortInfo struct {
+	Proto       string `json:"proto"`
+	LocalAddr   string `json:"local_addr"`
+	Port        int    `json:"port"`
+	PID         int    `json:"pid"`
+	ProcessName string `json:"process_name"`
+	State       string `json:"state"`
+}
 
 // KillResult holds the result of a kill operation.
 type KillResult struct {
@@ -15,6 +19,22 @@ type KillResult struct {
 	Error       string
 }
 
+// FindByPort returns port info entries matching the given port number.
+func FindByPort(port int) ([]PortInfo, error) {
+	all, err := ScanPorts()
+	if err != nil {
+		return nil, err
+	}
+
+	var matched []PortInfo
+	for _, p := range all {
+		if p.Port == port {
+			matched = append(matched, p)
+		}
+	}
+	return matched, nil
+}
+
 // KillByPort finds the process using the given port and kills it.
 func KillByPort(port int) []KillResult {
 	entries, err := FindByPort(port)
@@ -22,7 +42,7 @@ func KillByPort(port int) []KillResult {
 		return []KillResult{{
 			Port:    port,
 			Success: false,
-			Error:   fmt.Sprintf("failed to scan ports: %v", err),
+			Error:   "failed to scan ports: " + err.Error(),
 		}}
 	}
 
@@ -30,11 +50,11 @@ func KillByPort(port int) []KillResult {
 		return []KillResult{{
 			Port:    port,
 			Success: false,
-			Error:   fmt.Sprintf("no process found on port %d", port),
+			Error:   "no process found on port",
 		}}
 	}
 
-	// Deduplicate PIDs (same PID can appear on multiple addresses)
+	// Deduplicate PIDs
 	seen := make(map[int]bool)
 	var results []KillResult
 
@@ -60,14 +80,4 @@ func KillByPort(port int) []KillResult {
 	}
 
 	return results
-}
-
-// killPID kills a process by its PID using taskkill.
-func killPID(pid int) error {
-	cmd := exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/F")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s: %s", err, string(output))
-	}
-	return nil
 }

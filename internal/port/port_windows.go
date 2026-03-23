@@ -1,3 +1,5 @@
+//go:build windows
+
 package port
 
 import (
@@ -7,17 +9,7 @@ import (
 	"strings"
 )
 
-// PortInfo holds information about a port binding.
-type PortInfo struct {
-	Proto       string `json:"proto"`
-	LocalAddr   string `json:"local_addr"`
-	Port        int    `json:"port"`
-	PID         int    `json:"pid"`
-	ProcessName string `json:"process_name"`
-	State       string `json:"state"`
-}
-
-// ScanPorts returns all listening TCP/UDP ports on the system.
+// ScanPorts returns all listening TCP/UDP ports on Windows.
 func ScanPorts() ([]PortInfo, error) {
 	out, err := exec.Command("netstat", "-ano").Output()
 	if err != nil {
@@ -47,7 +39,6 @@ func ScanPorts() ([]PortInfo, error) {
 
 		localAddr := fields[1]
 
-		// Parse port from local address
 		lastColon := strings.LastIndex(localAddr, ":")
 		if lastColon == -1 {
 			continue
@@ -58,7 +49,6 @@ func ScanPorts() ([]PortInfo, error) {
 			continue
 		}
 
-		// State and PID
 		var state string
 		var pidStr string
 
@@ -69,12 +59,10 @@ func ScanPorts() ([]PortInfo, error) {
 			state = fields[3]
 			pidStr = fields[4]
 		} else {
-			// UDP has no state column
 			state = "*"
 			pidStr = fields[3]
 		}
 
-		// Only show LISTENING ports (and all UDP)
 		if proto == "TCP" && state != "LISTENING" {
 			continue
 		}
@@ -102,23 +90,6 @@ func ScanPorts() ([]PortInfo, error) {
 	return ports, nil
 }
 
-// FindByPort returns port info entries matching the given port number.
-func FindByPort(port int) ([]PortInfo, error) {
-	all, err := ScanPorts()
-	if err != nil {
-		return nil, err
-	}
-
-	var matched []PortInfo
-	for _, p := range all {
-		if p.Port == port {
-			matched = append(matched, p)
-		}
-	}
-	return matched, nil
-}
-
-// buildPIDNameMap uses tasklist to map PIDs to process names.
 func buildPIDNameMap() (map[int]string, error) {
 	out, err := exec.Command("tasklist", "/FO", "CSV", "/NH").Output()
 	if err != nil {
@@ -132,7 +103,6 @@ func buildPIDNameMap() (map[int]string, error) {
 		if line == "" {
 			continue
 		}
-		// Format: "name.exe","PID","Session Name","Session#","Mem Usage"
 		parts := strings.Split(line, "\",\"")
 		if len(parts) < 2 {
 			continue
@@ -146,4 +116,14 @@ func buildPIDNameMap() (map[int]string, error) {
 		m[pid] = name
 	}
 	return m, nil
+}
+
+// killPID kills a process by PID on Windows.
+func killPID(pid int) error {
+	cmd := exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/F")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, string(output))
+	}
+	return nil
 }
