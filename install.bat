@@ -14,8 +14,19 @@ echo.
 :: Create directory
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
-:: Copy binary
-copy /Y "%~dp0portman-windows-amd64.exe" "%INSTALL_DIR%\portman.exe" >nul 2>&1
+:: Copy binary (check same dir first, then dist/)
+set "BIN_SRC="
+if exist "%~dp0portman-windows-amd64.exe" set "BIN_SRC=%~dp0portman-windows-amd64.exe"
+if exist "%~dp0dist\portman-windows-amd64.exe" set "BIN_SRC=%~dp0dist\portman-windows-amd64.exe"
+
+if "%BIN_SRC%"=="" (
+    echo  [ERROR] Cannot find portman-windows-amd64.exe
+    echo  Place this script next to the .exe or in the project root.
+    pause
+    exit /b 1
+)
+
+copy /Y "%BIN_SRC%" "%INSTALL_DIR%\portman.exe" >nul 2>&1
 if errorlevel 1 (
     echo  [ERROR] Failed to copy binary.
     pause
