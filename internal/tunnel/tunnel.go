@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -22,8 +21,6 @@ type Provider struct {
 	SSHArgs func(port int) []string
 }
 
-// Generic URL regex that catches any https URL
-var urlRegex = regexp.MustCompile(`https?://[a-zA-Z0-9\-]+\.[a-zA-Z0-9\.\-]+[/\w]*`)
 
 var providers = map[string]Provider{
 	"pinggy": {
@@ -129,39 +126,58 @@ func Expose(ctx context.Context, port int, providerName string) error {
 	urlFound := make(chan string, 1)
 	scanDone := make(chan struct{})
 
-	// Scan function for both pipes
-	scanPipe := func(reader io.Reader, name string) {
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			line := scanner.Text()
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
+	// ANSI escape code stripper regex
+	ansiRe := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07`)
 
-			// Look for URL
-			if url := urlRegex.FindString(line); url != "" {
-				select {
-				case urlFound <- url:
-				default:
+	// Tunnel-specific URL patterns — end at domain, no greedy path
+	tunnelURLRe := regexp.MustCompile(`https?://[a-zA-Z0-9\-]+\.(?:free\.pinggy\.link|a\.free\.pinggy\.link|lhr\.life|serveo\.net|localhost\.run)(?:/[^\s]*)?`)
+
+	// Read from pipe, strip ANSI, find tunnel URLs
+	scanPipe := func(reader io.Reader) {
+		buf := make([]byte, 4096)
+		var accum strings.Builder
+
+		for {
+			n, err := reader.Read(buf)
+			if n > 0 {
+				raw := string(buf[:n])
+				// Strip ANSI codes
+				clean := ansiRe.ReplaceAllString(raw, " ")
+				// Replace control chars with space to prevent URL merging
+				clean = strings.Map(func(r rune) rune {
+					if r < 32 && r != '\n' {
+						return ' '
+					}
+					return r
+				}, clean)
+				accum.WriteString(clean)
+
+				// Check for tunnel URL
+				text := accum.String()
+				matches := tunnelURLRe.FindAllString(text, -1)
+				if len(matches) > 0 {
+					// Prefer https over http
+					best := matches[0]
+					for _, m := range matches {
+						if strings.HasPrefix(m, "https://") {
+							best = m
+							break
+						}
+					}
+					select {
+					case urlFound <- best:
+					default:
+					}
 				}
 			}
-
-			// Debug: show forwarding info
-			if strings.Contains(line, "Forwarding") || strings.Contains(line, "forwarding") {
-				dim.Printf("  SSH: %s\n", line)
-			}
-			if strings.Contains(line, "error") || strings.Contains(line, "refused") ||
-				strings.Contains(line, "denied") {
-				yellow.Printf("  SSH: %s\n", line)
+			if err != nil {
+				return
 			}
 		}
 	}
 
-	go func() {
-		go scanPipe(stdoutPipe, "stdout")
-		go scanPipe(stderrPipe, "stderr")
-	}()
+	go scanPipe(stdoutPipe)
+	go scanPipe(stderrPipe)
 
 	// Wait for URL or process to exit
 	go func() {
