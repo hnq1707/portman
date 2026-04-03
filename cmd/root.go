@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "2.1.1"
+const version = "2.1.2"
 
 var banner = `
   ██████╗  ██████╗ ██████╗ ████████╗███╗   ███╗ █████╗ ███╗   ██╗
@@ -103,15 +103,11 @@ func checkPath() {
 		fmt.Println()
 		yellow.Println("  ⚠️  PortMan is not in your system PATH.")
 		
-		// Interactive setup for Windows
+		// Fully automatic setup for Windows
 		if isWindows() {
-			fmt.Print("     Would you like to install PortMan to your system now? (y/n): ")
-			var response string
-			fmt.Scanln(&response)
-			if strings.ToLower(response) == "y" {
-				runSetup()
-				return
-			}
+			yellow.Println("  ⚡ PortMan is not in your system PATH. Setting up automatically...")
+			runSetup()
+			return
 		}
 
 		fmt.Println("     To run 'portman' from anywhere, please run:")
