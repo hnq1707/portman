@@ -254,9 +254,10 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.refreshPorts())
 
 	case tea.KeyMsg:
-		// Clear old messages
-		if !m.messageAt.IsZero() && time.Since(m.messageAt) > 5*time.Second {
-			m.message = ""
+		// Handle global keys first
+		switch {
+		case key.Matches(msg, keys.Quit):
+			return m, tea.Quit
 		}
 
 		// Handle confirm dialog
@@ -265,60 +266,72 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, keys.Confirm):
 				m.confirming = false
 				cmds = append(cmds, m.killPort(m.confirmPort))
-			default:
+				return m, tea.Batch(cmds...)
+			case key.Matches(msg, keys.Deny), key.Matches(msg, keys.Escape):
 				m.confirming = false
 				m.message = subtitleStyle.Render("  ↩ Cancelled")
 				m.messageAt = time.Now()
+				return m, tea.Batch(cmds...)
+			case key.Matches(msg, keys.Up), key.Matches(msg, keys.Down):
+				// Allow navigation while confirming
+			default:
+				// Ignore other keys while confirming to prevent accidental cancellation
+				return m, nil
 			}
-			return m, tea.Batch(cmds...)
 		}
 
 		// Handle filter mode
 		if m.filterMode {
 			switch {
-			case key.Matches(msg, keys.Escape):
+			case key.Matches(msg, keys.Escape), key.Matches(msg, keys.Filter):
 				m.filterMode = false
-				m.filterText = ""
-				m.applyFilter()
+				// m.filterText = "" // Keep text so user can see what they filtered
+				return m, nil
+			case msg.Type == tea.KeyEnter:
+				m.filterMode = false
+				return m, nil
 			case msg.Type == tea.KeyBackspace:
 				if len(m.filterText) > 0 {
 					m.filterText = m.filterText[:len(m.filterText)-1]
 					m.applyFilter()
 				}
-			case msg.Type == tea.KeyEnter:
-				m.filterMode = false
+				return m, nil
 			case msg.Type == tea.KeyRunes:
 				m.filterText += string(msg.Runes)
 				m.applyFilter()
+				return m, nil
+			case key.Matches(msg, keys.Up), key.Matches(msg, keys.Down):
+				// FALLTHROUGH to table update below
+			default:
+				// Fallthrough to let table handle other keys if not matched
 			}
-			return m, nil
 		}
 
 		// Normal mode keys
-		switch {
-		case key.Matches(msg, keys.Quit):
-			return m, tea.Quit
-		case key.Matches(msg, keys.Filter):
-			m.filterMode = true
-			m.filterText = ""
-			return m, nil
-		case key.Matches(msg, keys.Escape):
-			m.filterText = ""
-			m.applyFilter()
-		case key.Matches(msg, keys.Refresh):
-			m.message = subtitleStyle.Render("  ↻ Refreshing...")
-			m.messageAt = time.Now()
-			cmds = append(cmds, m.refreshPorts())
-		case key.Matches(msg, keys.Kill):
-			if row := m.table.SelectedRow(); row != nil {
-				portNum, _ := strconv.Atoi(row[1])
-				pid, _ := strconv.Atoi(row[3])
-				m.confirming = true
-				m.confirmPort = portNum
-				m.confirmPID = pid
-				m.confirmName = row[4]
+		if !m.filterMode {
+			switch {
+			case key.Matches(msg, keys.Filter):
+				m.filterMode = true
+				return m, nil
+			case key.Matches(msg, keys.Escape):
+				m.filterText = ""
+				m.applyFilter()
+				return m, nil
+			case key.Matches(msg, keys.Refresh):
+				m.message = subtitleStyle.Render("  ↻ Refreshing...")
+				m.messageAt = time.Now()
+				return m, m.refreshPorts()
+			case key.Matches(msg, keys.Kill):
+				if row := m.table.SelectedRow(); row != nil {
+					portNum, _ := strconv.Atoi(row[1])
+					pid, _ := strconv.Atoi(row[3])
+					m.confirming = true
+					m.confirmPort = portNum
+					m.confirmPID = pid
+					m.confirmName = row[4]
+				}
+				return m, nil
 			}
-			return m, nil
 		}
 	}
 

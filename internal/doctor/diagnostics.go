@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/nay-kia/portman/internal/port"
+	"github.com/nay-kia/portman/internal/utils"
 )
 
 // Severity levels for diagnostic findings.
@@ -74,6 +75,7 @@ func RunDiagnostics() (*Report, error) {
 	report.Findings = append(report.Findings, checkSuspiciousPorts(ports)...)
 	report.Findings = append(report.Findings, checkHighPorts(ports)...)
 	report.Findings = append(report.Findings, checkPrivilegedPorts(ports)...)
+	report.Findings = append(report.Findings, checkAdminPrivileges()...)
 
 	// Calculate score
 	for _, f := range report.Findings {
@@ -335,4 +337,18 @@ func GetFixablePorts(findings []Finding) []int {
 		}
 	}
 	return ports
+}
+func checkAdminPrivileges() []Finding {
+	if !utils.IsAdmin() {
+		return []Finding{
+			{
+				Title:       "Limited privileges",
+				Description: "PortMan is not running as Administrator/Root. You may be unable to kill processes owned by system services or other users.",
+				Severity:    SeverityWarning,
+				Fixable:     false,
+				FixAction:   "Restart terminal as Administrator/Root for full control",
+			},
+		}
+	}
+	return nil
 }

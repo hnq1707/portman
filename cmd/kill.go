@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/nay-kia/portman/internal/port"
+	"github.com/nay-kia/portman/internal/utils"
 )
 
 var (
@@ -89,6 +90,9 @@ func runKillPorts(cmd *cobra.Command, args []string) {
 				green.Printf("  ✓ Killed %s (PID %d) on port %d\n", r.ProcessName, r.PID, portNum)
 			} else {
 				red.Printf("  ✗ Failed to kill PID %d on port %d: %s\n", r.PID, portNum, r.Error)
+				if strings.Contains(r.Error, "Access Denied") && !utils.IsAdmin() {
+					yellow.Println("     💡 Tip: Try running PortMan in an Administrator terminal.")
+				}
 			}
 		}
 	}

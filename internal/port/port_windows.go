@@ -123,7 +123,14 @@ func killPID(pid int) error {
 	cmd := exec.Command("taskkill", "/PID", strconv.Itoa(pid), "/F")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s: %s", err, string(output))
+		outStr := string(output)
+		if strings.Contains(outStr, "Access is denied") {
+			return fmt.Errorf("Access Denied: Administrator privileges required")
+		}
+		if strings.Contains(outStr, "not found") {
+			return fmt.Errorf("Process ID %d not found", pid)
+		}
+		return fmt.Errorf("%s: %s", err, outStr)
 	}
 	return nil
 }
