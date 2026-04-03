@@ -56,7 +56,7 @@ func (m *Mapper) Start(ctx context.Context) error {
 	cyan.Printf("\n  🔗 Port mapping active: %s → %s\n", listenAddr, targetAddr)
 
 	dim := color.New(color.FgHiBlack)
-	dim.Println("  Press Ctrl+C to stop\n")
+	dim.Println("  Press Ctrl+C to stop")
 
 	// Close listener when context is cancelled
 	go func() {

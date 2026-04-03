@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/nay-kia/portman/internal/config"
 	"github.com/nay-kia/portman/internal/profile"
 )
 
@@ -67,43 +69,108 @@ var profileListCmd = &cobra.Command{
 }
 
 var profileCheckCmd = &cobra.Command{
-	Use:     "check <name>",
-	Short:   "Check if all profile ports are active",
-	Example: "  portman profile check myapp",
-	Args:    cobra.ExactArgs(1),
+	Use:   "check [name]",
+	Short: "Check if ports are active (profile or .portman.yml)",
+	Long: `Check port health from a saved profile or .portman.yml.
+
+If a profile name is given, checks that profile's ports.
+If no name is given, reads .portman.yml from the current directory.`,
+	Example: `  portman profile check myapp      # Check saved profile
+  portman profile check             # Check .portman.yml in current dir`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		green := color.New(color.FgGreen)
-		red := color.New(color.FgRed)
-		cyan := color.New(color.FgCyan, color.Bold)
-		redBold := color.New(color.FgRed, color.Bold)
-
-		name := args[0]
-		results, err := profile.Check(name)
-		if err != nil {
-			redBold.Printf("\n  ✗ %v\n\n", err)
-			return
-		}
-
-		cyan.Printf("\n  📋 Profile '%s' — checking %d port(s):\n\n", name, len(results))
-
-		allOK := true
-		for _, r := range results {
-			if r.Active {
-				green.Printf("    ✓ :%d %s — active (%s)\n", r.Entry.Port, r.Entry.ProcessName, r.Current)
-			} else {
-				red.Printf("    ✗ :%d %s — not listening\n", r.Entry.Port, r.Entry.ProcessName)
-				allOK = false
-			}
-		}
-
-		fmt.Println()
-		if allOK {
-			green.Println("  ✓ All ports are active!")
+		if len(args) == 0 {
+			// No name → check .portman.yml
+			runConfigCheck()
 		} else {
-			red.Println("  ✗ Some ports are not active")
+			// Name given → check saved profile
+			runProfileCheck(args[0])
 		}
-		fmt.Println()
 	},
+}
+
+func runProfileCheck(name string) {
+	green := color.New(color.FgGreen)
+	red := color.New(color.FgRed)
+	cyan := color.New(color.FgCyan, color.Bold)
+	redBold := color.New(color.FgRed, color.Bold)
+
+	results, err := profile.Check(name)
+	if err != nil {
+		redBold.Printf("\n  ✗ %v\n\n", err)
+		return
+	}
+
+	cyan.Printf("\n  📋 Profile '%s' — checking %d port(s):\n\n", name, len(results))
+
+	allOK := true
+	for _, r := range results {
+		if r.Active {
+			green.Printf("    ✓ :%d %s — active (%s)\n", r.Entry.Port, r.Entry.ProcessName, r.Current)
+		} else {
+			red.Printf("    ✗ :%d %s — not listening\n", r.Entry.Port, r.Entry.ProcessName)
+			allOK = false
+		}
+	}
+
+	fmt.Println()
+	if allOK {
+		green.Println("  ✓ All ports are active!")
+	} else {
+		red.Println("  ✗ Some ports are not active")
+	}
+	fmt.Println()
+}
+
+func runConfigCheck() {
+	green := color.New(color.FgGreen)
+	greenBold := color.New(color.FgGreen, color.Bold)
+	red := color.New(color.FgRed)
+	redBold := color.New(color.FgRed, color.Bold)
+	cyan := color.New(color.FgCyan, color.Bold)
+
+	cwd, _ := os.Getwd()
+	cfg, err := config.LoadConfig(cwd)
+	if err != nil {
+		redBold.Printf("\n  ✗ %v\n\n", err)
+		return
+	}
+
+	results, err := config.CheckConfig(cfg)
+	if err != nil {
+		redBold.Printf("\n  ✗ Failed to check: %v\n\n", err)
+		return
+	}
+
+	projectName := cfg.Name
+	if projectName == "" {
+		projectName = "project"
+	}
+
+	cyan.Printf("\n  ✅ %s — checking %d port(s):\n\n", projectName, len(results))
+
+	allOK := true
+	for _, r := range results {
+		label := r.Spec.Name
+		if label == "" {
+			label = fmt.Sprintf("port %d", r.Spec.Port)
+		}
+
+		if r.OK {
+			green.Printf("    ✓ :%d %s — %s\n", r.Spec.Port, label, r.Message)
+		} else {
+			red.Printf("    ✗ :%d %s — %s\n", r.Spec.Port, label, r.Message)
+			allOK = false
+		}
+	}
+
+	fmt.Println()
+	if allOK {
+		greenBold.Println("  ✓ All ports OK!")
+	} else {
+		redBold.Println("  ✗ Some ports failed")
+	}
+	fmt.Println()
 }
 
 var profileDeleteCmd = &cobra.Command{

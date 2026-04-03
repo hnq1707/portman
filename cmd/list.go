@@ -2,11 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -18,8 +15,10 @@ import (
 var (
 	listPort   int
 	listJSON   bool
-	listWatch  bool
 	listFilter string
+	listDev    bool
+	listRange  string
+	listFree   string
 )
 
 var listCmd = &cobra.Command{
@@ -29,11 +28,12 @@ var listCmd = &cobra.Command{
 	Example: `  portman list
   portman list --port 8080
   portman list --json
-  portman list --watch
-  portman list --filter node`,
+  portman list --filter node
+  portman list --free 8000-9000
+  portman list --free 8000-9000 --count 5`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if listWatch {
-			runWatch(args)
+		if listFree != "" {
+			runFreePortScan(cmd)
 			return
 		}
 		runList(cmd, args)
@@ -74,56 +74,55 @@ func runList(cmd *cobra.Command, args []string) {
 	}
 }
 
-func runWatch(args []string) {
+var freeCount int
+
+func runFreePortScan(cmd *cobra.Command) {
+	green := color.New(color.FgGreen, color.Bold)
+	red := color.New(color.FgRed, color.Bold)
 	cyan := color.New(color.FgCyan, color.Bold)
 	dim := color.New(color.FgHiBlack)
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	render := func() {
-		// Clear screen
-		fmt.Print("\033[2J\033[H")
-
-		cyan.Println("  📡 PORTMAN WATCH MODE")
-		dim.Printf("  Refreshing every 2s • Press Ctrl+C to stop\n")
-
-		ports, err := fetchPorts(args)
-		if err != nil {
-			red := color.New(color.FgRed)
-			red.Printf("\n  ✗ Error: %v\n", err)
-			return
-		}
-
-		ui.RenderPortTable(ports)
-
-		if len(ports) > 0 {
-			uniquePIDs := make(map[int]bool)
-			for _, p := range ports {
-				uniquePIDs[p.PID] = true
-			}
-			dim.Printf("  %d port(s), %d process(es) • %s\n",
-				len(ports), len(uniquePIDs), time.Now().Format("15:04:05"))
-		}
+	// Parse range
+	parts := strings.Split(listFree, "-")
+	if len(parts) != 2 {
+		red.Printf("\n  ✗ Invalid range format. Use: --free start-end (e.g., --free 8000-9000)\n\n")
+		return
 	}
 
-	// First render
-	render()
-
-	for {
-		select {
-		case <-ticker.C:
-			render()
-		case <-sigCh:
-			fmt.Print("\033[2J\033[H")
-			yellow := color.New(color.FgYellow)
-			yellow.Println("\n  ⏹ Watch mode stopped.\n")
-			return
-		}
+	start, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	end, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err1 != nil || err2 != nil {
+		red.Printf("\n  ✗ Invalid port numbers in range\n\n")
+		return
 	}
+
+	if start < 1 || end > 65535 {
+		red.Printf("\n  ✗ Port range must be between 1 and 65535\n\n")
+		return
+	}
+
+	total := end - start + 1
+	if total < 0 {
+		total = -total
+	}
+
+	cyan.Printf("\n  🔍 Scanning %d ports (%d-%d)...\n\n", total, start, end)
+
+	freePorts := port.FindFreePorts(start, end, freeCount)
+
+	if len(freePorts) == 0 {
+		red.Printf("  ✗ No free ports found in range %d-%d\n\n", start, end)
+		return
+	}
+
+	green.Printf("  ✓ Found %d free port(s):\n\n", len(freePorts))
+
+	for _, p := range freePorts {
+		fmt.Printf("    ● %d\n", p)
+	}
+
+	fmt.Println()
+	dim.Printf("  💡 Use any of these ports for your service.\n\n")
 }
 
 func fetchPorts(args []string) ([]port.PortInfo, error) {
@@ -152,6 +151,35 @@ func fetchPorts(args []string) ([]port.PortInfo, error) {
 		}
 	}
 
+	// Dev port range filter (3000-9999)
+	if listDev {
+		var filtered []port.PortInfo
+		for _, entry := range ports {
+			if entry.Port >= 3000 && entry.Port <= 9999 {
+				filtered = append(filtered, entry)
+			}
+		}
+		ports = filtered
+	}
+
+	// Custom range filter: --range 8000-9000
+	if listRange != "" {
+		rangeParts := strings.Split(listRange, "-")
+		if len(rangeParts) == 2 {
+			low, e1 := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
+			high, e2 := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
+			if e1 == nil && e2 == nil {
+				var filtered []port.PortInfo
+				for _, entry := range ports {
+					if entry.Port >= low && entry.Port <= high {
+						filtered = append(filtered, entry)
+					}
+				}
+				ports = filtered
+			}
+		}
+	}
+
 	// Process name filter
 	if listFilter != "" {
 		lower := strings.ToLower(listFilter)
@@ -170,8 +198,10 @@ func fetchPorts(args []string) ([]port.PortInfo, error) {
 func init() {
 	listCmd.Flags().IntVarP(&listPort, "port", "p", 0, "Filter by specific port number")
 	listCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output in JSON format")
-	listCmd.Flags().BoolVarP(&listWatch, "watch", "w", false, "Auto-refresh every 2 seconds")
 	listCmd.Flags().StringVarP(&listFilter, "filter", "f", "", "Filter by process name")
+	listCmd.Flags().BoolVarP(&listDev, "dev", "d", false, "Show only dev ports (3000-9999)")
+	listCmd.Flags().StringVarP(&listRange, "range", "r", "", "Filter by port range (e.g. 8000-9000)")
+	listCmd.Flags().StringVar(&listFree, "free", "", "Scan for free ports in a range (e.g. 8000-9000)")
+	listCmd.Flags().IntVarP(&freeCount, "count", "c", 0, "Max free ports to find with --free (0 = all)")
 	rootCmd.AddCommand(listCmd)
-	_ = fmt.Sprintf("") // ensure fmt import
 }

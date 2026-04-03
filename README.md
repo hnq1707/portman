@@ -1,6 +1,6 @@
 # 🚀 PortMan — Local Port Manager
 
-A blazing fast CLI tool to **list**, **kill**, and **forward** local ports.  
+A blazing fast CLI tool to **list**, **kill**, **investigate**, and **monitor** local ports.  
 Built with Go. Perfect for microservice development.
 
 ---
@@ -40,7 +40,10 @@ go build -ldflags="-s -w" -o portman.exe .
 ```bash
 portman list              # Tất cả ports đang listen
 portman list --port 8080  # Filter theo port
+portman list --filter node # Filter theo process name
+portman list --dev        # Chỉ dev ports (3000-9999)
 portman list --json       # JSON output (pipe to jq)
+portman list --free 8000-9000  # Tìm ports trống trong range
 ```
 
 ### 💀 Kill process on a port
@@ -48,12 +51,53 @@ portman list --json       # JSON output (pipe to jq)
 portman kill 8080           # Kill với confirmation
 portman kill 3000 8080 5432 # Kill nhiều ports
 portman kill 8080 -f        # Force kill (bỏ qua confirm)
+portman kill --all node     # Kill tất cả ports của node
+```
+
+### 🔍 Deep investigate a port
+```bash
+portman why 3000    # Process tree, memory, config files, related ports
+portman why 8080    # Interactive: kill, open dir
+```
+
+### 👁 Real-time port monitoring
+```bash
+portman watch             # Timeline view: NEW/GONE/SWAP events
+portman watch --interval 5  # Custom poll interval
+portman dashboard         # Full TUI dashboard with kill support
+```
+
+### 🏥 Port health diagnostics
+```bash
+portman doctor        # Health score, conflict detection, suspicious ports
+portman doctor --fix  # Interactive auto-fix for issues
 ```
 
 ### 🔗 Forward port traffic
 ```bash
 portman map 3000 8080              # Forward :3000 → :8080
 portman map 80 3000 --host 0.0.0.0 # Expose ra network
+```
+
+### 🌐 Expose port to internet
+```bash
+portman expose 3000              # Tunnel via pinggy
+portman expose 3000 --local      # LAN only (same WiFi)
+portman expose 8080 --provider serveo  # Use serveo.net
+```
+
+### 🐳 Docker port bindings
+```bash
+portman docker    # List all Docker container port mappings
+```
+
+### 📋 Port profiles
+```bash
+portman profile save myapp       # Snapshot current ports
+portman profile list             # List saved profiles
+portman profile check myapp      # Verify profile ports are active
+portman profile check            # Check .portman.yml in current dir
+portman profile delete myapp     # Delete a profile
 ```
 
 ---
@@ -90,14 +134,20 @@ dist/
 
 ## 🎯 Features
 
-| Feature | Description |
-|---------|-------------|
-| 🎨 Colored output | Well-known ports (MySQL, Redis…) highlighted |
-| ⚡ Fast | Native `netstat` parsing, zero overhead |
-| 🔒 Safe | Confirmation before killing processes |
-| 📊 JSON output | Pipe to `jq` for scripting |
-| 🔗 Port forwarding | Bidirectional TCP proxy with stats |
-| 🛑 Graceful shutdown | Ctrl+C cleanly stops forwarding |
+| Feature | Command | Description |
+|---------|---------|-------------|
+| 📡 List | `list` | Pretty table with process info, well-known port labels |
+| 💀 Kill | `kill` | Single/multi/by-name kill with confirmation |
+| 🔍 Investigate | `why` | Process tree, memory, config scan, interactive actions |
+| 👁 Watch | `watch` | Real-time port diff timeline (NEW/GONE/SWAP) |
+| 🖥️ Dashboard | `dashboard` | Full TUI with filter, kill, auto-refresh |
+| 🏥 Doctor | `doctor` | Health score, conflict detection, auto-fix |
+| 🔗 Forward | `map` | Bidirectional TCP proxy with stats |
+| 🌐 Expose | `expose` | Tunnel to internet or LAN |
+| 🐳 Docker | `docker` | Docker container port bindings |
+| 📋 Profile | `profile` | Save/load/check port snapshots |
+| 📊 JSON | `list --json` | Pipe to jq for scripting |
+| 🔍 Free scan | `list --free` | Find available ports in a range |
 
 ## 📦 Dependencies
 
@@ -105,6 +155,8 @@ dist/
 |---------|---------|
 | [spf13/cobra](https://github.com/spf13/cobra) | CLI framework |
 | [fatih/color](https://github.com/fatih/color) | Terminal colors |
+| [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) | TUI framework |
+| [charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) | TUI styling |
 
 ## License
 

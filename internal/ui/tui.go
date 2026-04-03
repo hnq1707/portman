@@ -380,13 +380,7 @@ func (m DashboardModel) View() string {
 
 // --- Helpers ---
 
-// Well-known ports for notes
-var knownPorts = map[int]string{
-	80: "HTTP", 443: "HTTPS", 3000: "Dev",
-	3306: "MySQL", 5432: "Postgres", 6379: "Redis",
-	8080: "HTTP Alt", 8443: "HTTPS Alt", 9200: "Elastic",
-	9092: "Kafka", 27017: "MongoDB",
-}
+// knownPorts is now centralized in port.WellKnownPorts
 
 func (m *DashboardModel) applyFilter() {
 	if m.filterText == "" {
@@ -410,7 +404,7 @@ func (m *DashboardModel) updateTableRows() {
 	rows := make([]table.Row, len(m.filtered))
 	for i, p := range m.filtered {
 		note := ""
-		if label, ok := knownPorts[p.Port]; ok {
+		if label := port.GetPortLabel(p.Port); label != "" {
 			note = "⭐ " + label
 		}
 		rows[i] = table.Row{

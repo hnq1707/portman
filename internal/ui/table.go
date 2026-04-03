@@ -12,21 +12,7 @@ import (
 	"github.com/nay-kia/portman/internal/port"
 )
 
-// Well-known ports for highlighting
-var wellKnownPorts = map[int]string{
-	80:    "HTTP",
-	443:   "HTTPS",
-	3000:  "Dev Server",
-	3306:  "MySQL",
-	5432:  "PostgreSQL",
-	5433:  "PostgreSQL",
-	6379:  "Redis",
-	8080:  "HTTP Alt",
-	8443:  "HTTPS Alt",
-	9200:  "Elasticsearch",
-	9092:  "Kafka",
-	27017: "MongoDB",
-}
+// wellKnownPorts is now centralized in port.WellKnownPorts
 
 // RenderPortTable renders port info as a pretty table.
 func RenderPortTable(ports []port.PortInfo) {
@@ -45,10 +31,7 @@ func RenderPortTable(ports []port.PortInfo) {
 
 	// Compute max widths from data
 	for _, p := range ports {
-		note := ""
-		if label, ok := wellKnownPorts[p.Port]; ok {
-			note = label
-		}
+		note := port.GetPortLabel(p.Port)
 		cols := []string{
 			p.Proto,
 			strconv.Itoa(p.Port),
@@ -96,12 +79,11 @@ func RenderPortTable(ports []port.PortInfo) {
 	hiYellowC := color.New(color.FgHiYellow)
 
 	for _, p := range ports {
-		note := ""
-		if label, ok := wellKnownPorts[p.Port]; ok {
-			note = "⭐ " + label
-		}
-
+		note := port.GetPortLabel(p.Port)
 		isHighlight := note != ""
+		if isHighlight {
+			note = "⭐ " + note
+		}
 
 		fmt.Print("  ")
 
