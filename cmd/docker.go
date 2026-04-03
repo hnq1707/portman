@@ -8,7 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/nay-kia/portman/internal/docker"
+	"github.com/hnq1707/portman/internal/docker"
 )
 
 var dockerCmd = &cobra.Command{

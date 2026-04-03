@@ -9,7 +9,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"github.com/nay-kia/portman/internal/port"
+	"github.com/hnq1707/portman/internal/port"
 )
 
 // wellKnownPorts is now centralized in port.WellKnownPorts

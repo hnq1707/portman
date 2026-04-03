@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nay-kia/portman/internal/port"
+	"github.com/hnq1707/portman/internal/port"
 )
 
 // EventType represents a port change event type.

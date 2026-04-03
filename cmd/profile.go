@@ -7,8 +7,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/nay-kia/portman/internal/config"
-	"github.com/nay-kia/portman/internal/profile"
+	"github.com/hnq1707/portman/internal/config"
+	"github.com/hnq1707/portman/internal/profile"
 )
 
 var profileCmd = &cobra.Command{

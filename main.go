@@ -1,6 +1,6 @@
 package main
 
-import "github.com/nay-kia/portman/cmd"
+import "github.com/hnq1707/portman/cmd"
 
 func main() {
 	cmd.Execute()

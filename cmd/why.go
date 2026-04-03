@@ -14,7 +14,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/nay-kia/portman/internal/port"
+	"github.com/hnq1707/portman/internal/port"
 )
 
 // portLabels is now centralized in port.WellKnownPorts

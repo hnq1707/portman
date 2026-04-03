@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/nay-kia/portman/internal/tunnel"
+	"github.com/hnq1707/portman/internal/tunnel"
 )
 
 var (

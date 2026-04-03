@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/nay-kia/portman/internal/port"
+	"github.com/hnq1707/portman/internal/port"
 )
 
 // Config represents a .portman.yml project config.

@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/nay-kia/portman/internal/port"
+	"github.com/hnq1707/portman/internal/port"
 )
 
 // --- Styles ---

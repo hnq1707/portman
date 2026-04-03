@@ -1,103 +1,77 @@
 # 🚀 PortMan — Local Port Manager
 
 A blazing fast CLI tool to **list**, **kill**, **investigate**, and **monitor** local ports.  
-Built with Go. Perfect for microservice development.
+Built with Go. Optimized for Windows, macOS, and Linux. Perfect for microservice development.
 
 ---
 
 ## ⚡ Quick Install
 
-### Option 1: Download binary (không cần cài gì)
+### Option 1: Automatic Setup (Recommended for Windows)
 
-1. Vào [**Releases**](https://github.com/nay-kia/portman/releases/latest)
-2. Tải file phù hợp OS:
-   | OS | File |
-   |---|---|
-   | Windows | `portman-windows-amd64.exe` |
-   | macOS (Intel) | `portman-darwin-amd64` |
-   | macOS (M1/M2) | `portman-darwin-arm64` |
-   | Linux | `portman-linux-amd64` |
-3. **Windows**: Tải về → chạy `install.bat` → xong! Mở terminal mới gõ `portman`
-4. **macOS/Linux**: `chmod +x portman-*` → move vào `/usr/local/bin/`
+1. Go to [**Releases**](https://github.com/hnq1707/portman/releases/latest)
+2. Download `portman-windows-amd64.exe`
+3. Just **run the EXE once**. PortMan will automatically:
+   - Create a permanent installation folder.
+   - Add itself to your system **PATH**.
+   - Rename itself to a clean `portman.exe`.
+4. Open a **New Terminal** and type: `portman`
 
-### Option 2: `go install` (dành cho dev có Go)
+### Option 2: `go install` (For developers with Go installed)
+
 ```bash
-go install github.com/nay-kia/portman@latest
+go install github.com/hnq1707/portman@latest
 ```
 
-### Option 3: Clone & Build
-```bash
-git clone https://github.com/nay-kia/portman.git
-cd portman
-go build -ldflags="-s -w" -o portman.exe .
-```
+### Option 3: Manual Install (macOS/Linux)
+
+1. Download the binary for your OS.
+2. `chmod +x portman-*`
+3. Move to your bin path: `sudo mv portman-* /usr/local/bin/portman`
 
 ---
 
-## 📖 Usage
+## 📖 Main Commands
 
-### 📡 List listening ports
+### 📡 List ports
 ```bash
-portman list              # Tất cả ports đang listen
-portman list --port 8080  # Filter theo port
-portman list --filter node # Filter theo process name
-portman list --dev        # Chỉ dev ports (3000-9999)
-portman list --json       # JSON output (pipe to jq)
-portman list --free 8000-9000  # Tìm ports trống trong range
+portman list              # All listening ports
+portman list --port 8080  # Filter by port
+portman list --filter node # Filter by process name
+portman list --json       # JSON output for scripting
+portman list --free 8000-9000  # Find available ports in range
 ```
 
-### 💀 Kill process on a port
+### 💀 Kill processes
 ```bash
-portman kill 8080           # Kill với confirmation
-portman kill 3000 8080 5432 # Kill nhiều ports
-portman kill 8080 -f        # Force kill (bỏ qua confirm)
-portman kill --all node     # Kill tất cả ports của node
+portman kill 8080           # Kill with confirmation
+portman kill 3000 8080 5432 # Kill multiple ports
+portman kill 8080 -f        # Force kill (skip prompt)
+portman kill --all node     # Kill ALL ports used by 'node'
 ```
 
-### 🔍 Deep investigate a port
+### 🔍 Deep Investigate
 ```bash
 portman why 3000    # Process tree, memory, config files, related ports
-portman why 8080    # Interactive: kill, open dir
 ```
 
-### 👁 Real-time port monitoring
+### 👁 Real-time Monitoring
 ```bash
-portman watch             # Timeline view: NEW/GONE/SWAP events
-portman watch --interval 5  # Custom poll interval
-portman dashboard         # Full TUI dashboard with kill support
+portman watch             # Live timeline: NEW/GONE/SWAP events
+portman dashboard         # Interactive TUI dashboard with filter & kill
 ```
 
-### 🏥 Port health diagnostics
+### 🏥 System Diagnostics
 ```bash
-portman doctor        # Health score, conflict detection, suspicious ports
-portman doctor --fix  # Interactive auto-fix for issues
+portman doctor        # Health score, conflict detection, permission checks
+portman doctor --fix  # Interactive auto-fix for conflicts
 ```
 
-### 🔗 Forward port traffic
+### 🔗 Networking & Tunnels
 ```bash
-portman map 3000 8080              # Forward :3000 → :8080
-portman map 80 3000 --host 0.0.0.0 # Expose ra network
-```
-
-### 🌐 Expose port to internet
-```bash
-portman expose 3000              # Tunnel via pinggy
-portman expose 3000 --local      # LAN only (same WiFi)
-portman expose 8080 --provider serveo  # Use serveo.net
-```
-
-### 🐳 Docker port bindings
-```bash
-portman docker    # List all Docker container port mappings
-```
-
-### 📋 Port profiles
-```bash
-portman profile save myapp       # Snapshot current ports
-portman profile list             # List saved profiles
-portman profile check myapp      # Verify profile ports are active
-portman profile check            # Check .portman.yml in current dir
-portman profile delete myapp     # Delete a profile
+portman map 3000 8080              # Local forwarding :3000 → :8080
+portman expose 3000                # Tunnel to internet via pinggy
+portman expose 3000 --local        # Expose to Local Area Network (LAN)
 ```
 
 ---
@@ -108,56 +82,39 @@ portman profile delete myapp     # Delete a profile
 
 ```bash
 # Clone
-git clone https://github.com/nay-kia/portman.git
+git clone https://github.com/hnq1707/portman.git
 cd portman
 
 # Build
-go build -ldflags="-s -w" -o portman.exe .
-
-# Hoặc install vào GOPATH/bin
-go install .
-
-# Cross-platform build (cần make)
-make release
-```
-
-### Build output:
-```
-dist/
-├── portman-windows-amd64.exe
-├── portman-linux-amd64
-├── portman-darwin-amd64
-└── portman-darwin-arm64
+go build -o portman.exe .
 ```
 
 ---
 
-## 🎯 Features
+## 🎯 Feature Matrix
 
 | Feature | Command | Description |
 |---------|---------|-------------|
-| 📡 List | `list` | Pretty table with process info, well-known port labels |
-| 💀 Kill | `kill` | Single/multi/by-name kill with confirmation |
-| 🔍 Investigate | `why` | Process tree, memory, config scan, interactive actions |
-| 👁 Watch | `watch` | Real-time port diff timeline (NEW/GONE/SWAP) |
-| 🖥️ Dashboard | `dashboard` | Full TUI with filter, kill, auto-refresh |
-| 🏥 Doctor | `doctor` | Health score, conflict detection, auto-fix |
-| 🔗 Forward | `map` | Bidirectional TCP proxy with stats |
-| 🌐 Expose | `expose` | Tunnel to internet or LAN |
-| 🐳 Docker | `docker` | Docker container port bindings |
-| 📋 Profile | `profile` | Save/load/check port snapshots |
-| 📊 JSON | `list --json` | Pipe to jq for scripting |
-| 🔍 Free scan | `list --free` | Find available ports in a range |
+| 📡 List | `list` | Pretty table with labels for well-known ports |
+| 💀 Kill | `kill` | Single/multi/by-name termination |
+| 🔍 Why | `why` | Detailed process forensics & config scan |
+| 👁 Watch | `watch` | Real-time diff timeline of port activity |
+| 🖥️ TUI | `dashboard` | Full interactive dashboard with search & navigation |
+| 🏥 Doctor | `doctor` | Health score, conflict detection, Admin check |
+| 🔗 Proxy | `map` | Bidirectional TCP proxy with live stats |
+| 🌐 Tunnel | `expose` | Public/LAN tunneling support |
+| 🐳 Docker | `docker` | List Docker container port bindings |
+| 🩹 Setup | `setup` | Automatic PATH configuration for Windows |
 
 ## 📦 Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| [spf13/cobra](https://github.com/spf13/cobra) | CLI framework |
-| [fatih/color](https://github.com/fatih/color) | Terminal colors |
+| [spf13/cobra](https://github.com/spf13/cobra) | CLI architecture |
+| [fatih/color](https://github.com/fatih/color) | Terminal styling |
 | [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) | TUI framework |
 | [charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) | TUI styling |
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) for details.

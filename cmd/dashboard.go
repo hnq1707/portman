@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/nay-kia/portman/internal/ui"
+	"github.com/hnq1707/portman/internal/ui"
 )
 
 var dashboardCmd = &cobra.Command{
